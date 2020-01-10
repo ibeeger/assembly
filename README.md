@@ -5,7 +5,7 @@
 想法很简单，就是根据js的一些api，编辑arraybuffer之后保存图片，因为发现在原始的arraybuffer 后面添加数据，对图片显示没影响， 
 能够打乱图片并且在根据存储在图片中arraybuffer的数据规则，进行恢复。
 
-![图片打乱和恢复](//bloglibs.oss-cn-beijing.aliyuncs.com/articles/202001/0109001.jpg)
+![图片打乱和恢复](https://bloglibs.oss-cn-beijing.aliyuncs.com/articles/202001/0109001.jpg)
 
 进入正题前，需要对下面两点有所了解
 
