@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>图片</title>
+	<style>
+		img{ max-width: 100%; max-height: 100%;}
+		section{
+			display: flex;
+			width: 90%;
+			padding: 30px 0;
+			margin: 0 auto;
+			align-items: center;
+			align-content: space-between;
+		}
+		canvas{
+			max-height: 100%;
+			max-width: 100%;
+		}
+		section>div{
+			width: 50%;
+		}
+	</style>
+</head>
+<body>
+	
+	<section>
+		<div>
+			<img src="" id="photo" alt="">
+		</div>
+		<div>
+			<img src="" id="photo2" alt="">
+			<!-- <canvas></canvas> -->
+		</div>
+	</section>
+	
+	<input type="file" id="bbb">
+
+	<script>
+
+		const box = {}
+
+		async function encodeImage(box) {
+			// const cs = document.querySelector('canvas');
+			const cs = document.createElement('canvas');
+			const ctx = cs.getContext('2d');
+			const img = document.getElementById('photo');
+			cs.width = img.naturalWidth;
+			cs.height = img.naturalHeight;
+			let sw =box.sw, sh=box.sh, x = box.x, y=box.y;
+			ctx.drawImage(img,0,0);
+			let imgdataList = [], list=box.randomlist;
+			for(let i=0; i<y; i++) {
+				for(let j=0; j<x; j++) {
+					imgdataList.push(ctx.getImageData(j*sw,i*sh,sw,sh));
+				}
+			};
+			ctx.fillRect(0,0,cs.width,cs.height);
+			for(let i=0, j=0; i<list.length; i++) {
+				if(i >= x && (i%x) == 0) {
+					j++;
+				} 
+				ctx.putImageData(imgdataList[list[i]], sw*(i%x),sh*j);
+			}
+
+			cs.toBlob(function(blob){
+		    	var urlCreator = window.URL || window.webkitURL;
+				var imageUrl = urlCreator.createObjectURL(blob);
+		    	var img = document.querySelector("#photo2");
+		    	img.src= imageUrl
+			},"image/png")
+			// await showImage(arr, '#photo2')
+		}
+
+		function decodeImage() {
+
+		}
+
+		//计算打乱顺序
+		function calculateRandomRule(imgsize){
+			let sw=0, sh=0;
+			let x,y; //xy轴划分
+			let randomlist = []
+			for(let i=4; i<Math.max(imgsize.w,imgsize.h); i++) {
+				if(imgsize.w%i == 0) {
+					sw = imgsize.w/i;
+					x = i;
+					if(sh){break}
+				}
+				if(imgsize.h%i == 0) {
+					sh = imgsize.h/i;
+					y = i;
+					if(sw){break}
+				}
+			};
+
+			for(let i=0; i<x*y; i++) {
+				randomlist.push(i);
+			}
+			randomlist = randomlist.sort(() =>  0.4 - Math.random())
+			return {
+				sw,
+				sh,
+				x,
+				y,
+				randomlist
+			}
+		}
+
+
+		function getImageSize(bf) {
+			var blob = new Blob( [ bf ], { type: "image/png" } );
+		    var urlCreator = window.URL || window.webkitURL;
+		    var imageUrl = urlCreator.createObjectURL( blob );
+		    var img = new Image();
+		    return new Promise(function(resolve){
+		    	img.onload = function(){
+		    		resolve({w:img.naturalWidth, h:img.naturalHeight});
+		    	};
+		    	img.src = imageUrl;
+		    })
+		}
+
+
+		function showLocal(file,callback) {
+			var fileReader = new FileReader();
+			fileReader.onload = function(e) {
+				fileContent = e.target.result;
+				callback(fileContent);
+			}
+			fileReader.readAsArrayBuffer(file);
+		}
+	
+
+
+		document.getElementById('bbb').addEventListener('change',  function(e){
+			showLocal(e.target.files[0], async function(m){
+				let imgsize = await getImageSize(m);
+				let randomObj = calculateRandomRule(imgsize);
+				let arr = new Int8Array(m);
+				console.log(arr);
+				let boxabf = new ArrayBuffer(m.byteLength/50);
+				let newarr = new Int8Array(arr.length+randomObj.randomlist.length+1);
+				let boxarr = new Int8Array(boxabf.byteLength);
+				for(let i =0; i<newarr.length; i++){
+					if(i>=arr.length){
+						if(i=== arr.length+randomObj.randomlist.length){
+							newarr[i] = randomObj.randomlist.length;
+						} else{
+							newarr[i] = randomObj.randomlist[i-arr.length];
+						}
+					} else {
+						newarr[i] = arr[i]
+						boxarr[i] = arr[i]
+						// if(i>= (arr.length - boxarr.length) ) {
+						// 	boxarr[i-(arr.length-boxarr.length)] = arr[i];
+						// }
+					};
+					
+				}
+
+
+				//打乱原始数据
+				// arr = arr.sort(() => .4 - Math.random());
+				console.log(arr.length, randomObj.randomlist.length, newarr.length);
+				await showImage(boxarr, '#photo');
+				encodeImage(randomObj)
+			})
+		}, false)	
+
+
+		async function loadImage() {
+		 const res = await fetch('./images/demo.jpg');
+		 const ares = await res.arrayBuffer();
+		 const oldit = new Int8Array(ares);
+		 let ke = await showImage(oldit, '#photo');
+		 encodeImage();
+		}
+
+		async function showImage(bf, id){
+			var blob = new Blob( [ bf ], { type: "image/png" } );
+		    var urlCreator = window.URL || window.webkitURL;
+		    var imageUrl = urlCreator.createObjectURL( blob );
+		    var img = document.querySelector( id || "#photo" );
+		    return new Promise(function(resolve){
+		    	img.onload = resolve;
+		    	img.src = imageUrl;
+		    })
+		}
+
+		// loadImage()
+
+	</script>
+</body>
+</html>

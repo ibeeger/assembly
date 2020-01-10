@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>图片</title>
+	<style>
+		img{ width: 100px; height: 100px; background-color: #ccc; display: block;}
+		section{
+			display: flex;
+			width: 90%;
+			padding: 30px 0;
+			margin: 0 auto;
+			align-items: center;
+			align-content: space-between;
+		}
+		canvas{
+			max-height: 100%;
+			max-width: 100%;
+		}
+		section>div{
+			width: 50%;
+		}
+	</style>
+</head>
+<body>
+	
+	<section>
+		<div>
+			<img src="" id="photo" alt="">
+		</div>
+		<div>
+			<img src="" id="photo2" alt="">
+		</div>
+	</section>
+	
+	<input type="file" id="bbb">
+
+	<script>
+
+		function randomImage(bf) {
+
+			const endNumber = Math.floor(Math.random() * 255);
+			const newab = new ArrayBuffer(bf.buffer.byteLength+1);
+		 	const it = new Int8Array(newab);
+
+			for(let i = 100; i<it.length; i++) {
+				if(i>=bf.length) {
+					it[i] = endNumber;
+				} else {
+					it[i]=bf[i]-endNumber;
+				}
+			}
+			showImage(it, "#photo2");
+		}
+
+
+		function showLocal(file,callback) {
+			var fileReader = new FileReader();
+			fileReader.onload = function(e) {
+				fileContent = e.target.result;
+				callback(fileContent);
+			}
+			fileReader.readAsArrayBuffer(file);
+		}
+	
+		function decodeImage() {
+			
+		}
+
+
+		document.getElementById('bbb').addEventListener('change', function(e){
+			showLocal(e.target.files[0], function(m){
+				
+			})
+		}, false)	
+
+
+		async function loadImage() {
+		 const res = await fetch('./images/demo.jpg');
+		 const ares = await res.arrayBuffer();
+		 const oldit = new Int8Array(ares);
+		 showImage(oldit, "#photo");
+		 randomImage(oldit);
+		 return oldit;
+		}
+
+		async function showImage(bf, id){
+			var blob = new Blob( [ bf ], { type: "image/png" } );
+		    var urlCreator = window.URL || window.webkitURL;
+		    var imageUrl = urlCreator.createObjectURL( blob );
+		    var img = document.querySelector(id);
+		    img.src = imageUrl;
+		}
+		loadImage()
+
+	</script>
+</body>
+</html>

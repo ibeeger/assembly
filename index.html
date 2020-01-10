@@ -1,16 +1,119 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<title>demo</title>
 	<style>
 		*{margin: 0; padding: 0}
-		canvas{width: 600px; height: 400px;}
-
+		canvas{}
 	</style>
 </head>
 <body>
-	<canvas width="600" height="400"></canvas>
-	<script type='module' src="./dist/index.js?v=43433"></script>
+	<canvas width="300" height="300"></canvas>
+	<script>
+		const cs = document.querySelector('canvas');
+		// const ctx = cs.getContext('2d');
+		const width = cs.width;
+    	const height = cs.height;
+		var mem = null;
+		var as = {}
+
+		async function drawCanvas(){
+	        const img = await loadImage();
+	        const ctx = cs.getContext("2d");
+	        drawImage(cs, ctx, img);
+	        return ctx;
+	    }
+
+	    function drawImage(canvas, ctx, img) {
+	        var scale = Math.max(width / img.width, height / img.height);
+	        var x = (width / 2) - (img.width / 2) * scale;
+	        var y = (height / 2) - (img.height / 2) * scale;
+	        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+	    }
+
+	    async function loadImage(){
+	        return new Promise(resolve => {
+	            var img = new Image();
+	            img.src = './images/demo.jpg';
+	            img.onload = function() {resolve(this) };
+	        });
+	    }
+
+		async function run() {
+	        const ctx = await drawCanvas();
+	        const imageData = ctx.getImageData(0, 0, width, height);
+	        await setupAsTransforms(ctx, imageData)
+	    }
+	    run()
+
+		async function setupAsTransforms(ctx, imageData){
+	        const data = imageData.data;
+	        const byteSize = data.length;
+	        const initial = 2 * (((byteSize + 0xffff) & ~0xffff) >>> 16);
+	        console.log(byteSize, initial);
+	        const memory = new WebAssembly.Memory({ initial });
+	        const importObject = { env: { memory, abort: () => console.log("Abort!") }};
+	        let module = await WebAssembly.instantiateStreaming(
+	              // fetch("./build/optimized.wasm"),
+	              fetch("./build/untouched.wasm"),
+	              importObject
+	          );
+	        const { instance } = module;
+	        const mem = new Uint8Array(memory.buffer);
+	        Object.assign(as, {
+	            invert: as_transform("invert", imageData, ctx, mem, instance),
+	            grayscale: as_transform("grayscale", imageData, ctx, mem, instance),
+	            sepia: as_transform("sepia", imageData, ctx, mem, instance),
+	            convolve: as_transform("convolve", imageData, ctx, mem, instance),
+	        });
+    	}
+
+		// function drawImage() {
+		// 	return new Promise(function(resolve){
+		// 	var img = new Image();
+
+		// 		img.onload = function(){
+		// 			var scale = Math.max(cs.width / img.width, cs.height / img.height);
+		// 			var x = (cs.width / 2) - (img.width / 2) * scale;
+  //       			var y = (cs.height / 2) - (img.height / 2) * scale;
+		// 			ctx.fillStyle = '#ccc';
+		// 			ctx.fillRect(0,0,cs.width,cs.height);
+		// 			ctx.drawImage(img, x, y, img.width * scale,img.height * scale);
+		// 			resolve(ctx);
+		// 		}
+		// 		img.src = "./images/demo.jpg";
+		// 	})
+		// }
+
+		function as_transform(fn, imageData, ctx, mem, instance) {
+	        return (...args) => {
+	            const data = imageData.data;
+	            mem.set(data);
+	            const byteSize = data.length;
+				console.log(imageData, data)
+				console.log(fn);
+				try{
+	            	instance.exports[fn](byteSize, ...args);
+				}catch(e){
+					console.log('------',e)
+				}
+	            data.set(mem.subarray(byteSize, 2 * byteSize));
+	            ctx.putImageData(imageData, 0, 0);
+	        }
+	    };
+
+	    cs.addEventListener('click',function(){
+				as.grayscale();
+			}, false);
+		// window.addEventListener('load', async function(){
+		// 	await drawImage();
+		//  	const imageData = ctx.getImageData(0,0,cs.width,cs.height);
+		// 	const data = imageData.data;
+		// 	console.log(imageData, data);
+			
+		// 	await setupAsTransforms(ctx,imageData);
+		// }, false);
+
+	</script>
 </body>
 </html>
